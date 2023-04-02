@@ -2,7 +2,7 @@
   "profiles": {
     "ConsoleApplication": {
       "commandName": "Project",
-      "commandLineArgs": "PETR4 1 2,99"
+      "commandLineArgs": "PETR4 1000 24444,99"
     }
   }
 }

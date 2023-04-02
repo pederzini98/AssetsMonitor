@@ -1,4 +1,5 @@
 ﻿using Domain.Entities;
+using Domain.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
@@ -12,32 +13,40 @@ namespace Application
 {
     public class NotifyUser
     {
-
-        public void SendNotificationEmail(Email email)
+        public Dictionary<string, DateTime> UserThrottle = new();
+        public DateTime UserLastEmailSent(string email)
         {
-
-            MailMessage message = new();
-            SmtpClient smtp = new();
-
-            message.From = new MailAddress("From", email.SmtpServerConfig?.EmailAddress, Encoding.UTF8);
-            message.To.Add(new MailAddress(email.To ?? ""));
-            message.Subject = email.Subject;
-            message.Body = email.Body;
-            message.IsBodyHtml = true;
-
-            smtp.Host = email.SmtpServerConfig?.SmtpHostName ?? "";
-            smtp.EnableSsl = email.SmtpServerConfig?.UseSsl ?? true;
-            smtp.Port = email.SmtpServerConfig?.Port ?? 587; //Gmail port for e-mail 465 or 587
-
-            NetworkCredential NetworkCred = new()
+            return UserThrottle.ContainsKey(email) ? UserThrottle[email] : DateTime.UtcNow;
+        }
+        public static void SendNotificationEmail(Email email)
+        {
+            try
             {
-                UserName = email.SmtpServerConfig?.EmailAddress,//gmail user name
-                Password = email.SmtpServerConfig?.Password// password
-            };
-            smtp.UseDefaultCredentials = true;
-            smtp.Credentials = NetworkCred;
 
-            smtp.Send(message);
+                MailMessage message = new();
+
+                message.From = new MailAddress(email.SmtpServerConfig?.EmailAddress, HotDefault.SenderName, Encoding.UTF8);
+                foreach (var mailAddress in email.To)
+                {
+                    message.To.Add(new MailAddress(mailAddress ?? ""));
+                }
+                message.Subject = email.Subject;
+                message.Body = email.Body;
+                message.IsBodyHtml = true;
+
+
+
+                using SmtpClient smtp = new(email.SmtpServerConfig?.SmtpHostName, email.SmtpServerConfig?.Port ?? 587);
+                smtp.Credentials = new NetworkCredential(email.SmtpServerConfig?.EmailAddress, email.SmtpServerConfig?.Password);
+                smtp.EnableSsl = true;
+                smtp.Send(message);
+            }
+            catch (Exception e)
+            {
+
+                string messasag = e.Message;
+            }
+
         }
     }
 }

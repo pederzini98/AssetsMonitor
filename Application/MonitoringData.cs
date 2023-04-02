@@ -1,10 +1,13 @@
 ﻿using Domain.Entities;
+using Domain.Enums;
+using Domain.Helpers;
 using Microsoft.VisualStudio.Threading;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Configuration;
 using System.Diagnostics;
+using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
@@ -13,67 +16,88 @@ using System.Xml.Linq;
 
 namespace Application
 {
-    public class MonitoringData
+    public class MonitoringData : IMonitoringData
     {
-        NotifyUser _notifyUser { get; }
-        public MonitoringData()
+
+        private readonly Dictionary<string, AssetFoundFromAPI> emailThrottle = new();
+        public async Task FindAssetAsync(Asset assetToLookFor)
         {
-            _notifyUser = new();
-        }
-        public async Task FindAssetAsync(Asset assetToLookFor, NameValueCollection appSettings)
-        {
-            using var httpClient = new HttpClient();
-            Stopwatch nextrequest = new();
-            using var request = new HttpRequestMessage(new HttpMethod("GET"), $"https://brapi.dev/api/quote/{assetToLookFor.Name}");
-            request.Headers.TryAddWithoutValidation("Upgrade-Insecure-Requests", "1");
+
+            DateTime requestsThrottle = DateTime.UtcNow;
+            Actions actions = Actions.NoChanges;
+            double? lastValueFound = 0;
             while (true)
             {
-
-                var response = await httpClient.SendAsync(request);
-                if (response.IsSuccessStatusCode)
+                if (requestsThrottle < DateTime.UtcNow)
                 {
-                    var result = await response.Content.ReadAsStringAsync();
                     try
                     {
 
-                        AssetFoundFromAPI assetFoundFromAPI = DeserializeResponseFromAPI(result);
-
-                        if (assetFoundFromAPI is not null)
+                        string resultFromApi = await SendRequestToaAPIAsync(assetToLookFor); ;
+                        if (string.IsNullOrEmpty(resultFromApi) is false)
                         {
-                            if (assetFoundFromAPI?.CurrentValue > assetToLookFor.ValueToBuy)
+                            try
                             {
-                                (string subject, string body) = MountEmailInfos(assetFoundFromAPI?.CurrentValue, true);
-                                Email email = new(body, subject, appSettings);
-                                _notifyUser.SendNotificationEmail(email);
-                                Console.WriteLine($"Your Next request will be done at {DateTime.UtcNow.AddMinutes(2)}");
+                                AssetFoundFromAPI? assetFoundFromAPI = DeserializeResponseFromAPI(resultFromApi);
 
-                                continue;
+                                if (assetFoundFromAPI is not null && assetFoundFromAPI.CurrentValue is not null)
+                                {
+
+                                    if (assetFoundFromAPI?.CurrentValue > assetToLookFor.ValueToBuy)
+                                    {
+                                        actions = Actions.TimeToBuy;
+
+                                    }
+                                    if (assetFoundFromAPI?.CurrentValue > assetToLookFor.ValueToSell)
+                                    {
+                                        actions = Actions.TimeToSell;
+                                    }
+                                    if (emailThrottle.ContainsKey(HotSettings.EmailAddress) is false)
+                                    {
+                                        assetFoundFromAPI.NextEmailUpdate = DateTime.UtcNow;
+                                        emailThrottle.TryAdd(HotSettings.EmailAddress, assetFoundFromAPI);
+                                    }
+                                    if (emailThrottle[HotSettings.EmailAddress].NextEmailUpdate > DateTime.UtcNow
+                                        || (lastValueFound == assetFoundFromAPI?.CurrentValue && ValidateNextSendTime(assetFoundFromAPI.NextEmailUpdate) < TimeSpan.FromMinutes(2)))
+                                    {
+                                        requestsThrottle = DateTime.UtcNow.AddMinutes(ValidateNextSendTime(assetFoundFromAPI.NextEmailUpdate).TotalMinutes);
+                                        continue;
+                                    }
+
+                                    switch (actions)
+                                    {
+                                        case Actions.NoChanges:
+                                            continue;
+                                        case Actions.TimeToSell:
+                                        case Actions.TimeToBuy:
+                                            var emailToSend = BuildEmail(assetFoundFromAPI?.CurrentValue, assetToLookFor.Name, actions);
+                                            NotifyUser.SendNotificationEmail(emailToSend);
+                                            requestsThrottle = DateTime.UtcNow.AddMinutes(1);
+                                            emailThrottle[HotSettings.EmailAddress].NextEmailUpdate = DateTime.UtcNow.AddMinutes(1);
+                                            actions = Actions.NoChanges;
+                                            lastValueFound = assetFoundFromAPI?.CurrentValue;
+                                            continue;
+                                        default:
+                                            continue;
+                                    }
+                                }
+
+
                             }
-                            if (assetFoundFromAPI?.CurrentValue < assetToLookFor.ValueToSell)
+                            catch (Exception e)
                             {
-
-                                (string subject, string body) = MountEmailInfos(assetFoundFromAPI?.CurrentValue, false);
-                                Email email = new(body, subject, appSettings);
-                                _notifyUser.SendNotificationEmail(email);
-                                Console.WriteLine($"Your Next request will be done at? {DateTime.Now.AddMinutes(2).ToLocalTime()}");
-
-                                continue;
+                                string errorr = e.Message;
                             }
-                        }
-                        nextrequest.Reset();
-                        nextrequest.Start();
-                        while (nextrequest.ElapsedMilliseconds < 120000)
-                        {
+                            continue;
 
                         }
-                        nextrequest.Stop();
+                        Console.WriteLine($"Unable to get the request from the Server. Next retry: {requestsThrottle.ToLocalTime()}");
                     }
                     catch (Exception e)
                     {
 
-                        string errorr = e.Message;
+                        Console.WriteLine($"Expetion to process Queue {e.Message}");
                     }
-
                 }
 
             }
@@ -85,6 +109,25 @@ namespace Application
 
         }
 
+        private static async Task<string> SendRequestToaAPIAsync(Asset assetToLookFor)
+        {
+            try
+            {
+                using HttpClient httpClient = new();
+                using var request = new HttpRequestMessage(new HttpMethod("GET"), $"https://brapi.dev/api/quote/{assetToLookFor.Name}");
+                request.Headers.TryAddWithoutValidation("Upgrade-Insecure-Requests", "1");
+                var response = await httpClient.SendAsync(request);
+                return await response.Content.ReadAsStringAsync();
+
+            }
+            catch (Exception e)
+            {
+
+                return e.Message;
+
+            }
+        }
+
         private static AssetFoundFromAPI DeserializeResponseFromAPI(string response)
         {
             JsonDocument document = JsonDocument.Parse(response);
@@ -93,9 +136,39 @@ namespace Application
             string? valuesOfResponseToString = valuesOfResponse.ToString();
             return JsonSerializer.Deserialize<List<AssetFoundFromAPI>>(valuesOfResponseToString).FirstOrDefault();
         }
-        private static (string subject, string body) MountEmailInfos(double? currentValue, bool timetoSell)
+        private static Email BuildEmail(double? currentValue, string? assetName, Actions actions)
         {
-            throw new NotImplementedException();
+            (string subject, string body) = MountEmailInfos(currentValue, assetName, actions);
+            Email email = new(subject, body);
+            return email;
+        }
+        private static (string subject, string body) MountEmailInfos(double? currentValue, string? assetName, Actions actions)
+        {
+            string subjectStr = string.Empty;
+            string body = string.Empty;
+
+            switch (actions)
+            {
+
+                case Actions.TimeToSell:
+                    subjectStr = HotDefault.SellSubject.Replace("{x}", assetName);
+                    body = $"<span style='font-family:trebuchet ms, helvetica, sans-serif;'>Hello Trader!,!<br><br>Temos Novidades sobre o ativo:  <b> {assetName}</b>. O valor atual dele é de  <b>{currentValue} <b/>.  De acordo com as suas notificações é hora de vende-lô";
+                    break;
+                case Actions.TimeToBuy:
+                    subjectStr = HotDefault.BuySubject.Replace("{x}", assetName);
+                    body = $"<span style='font-family:trebuchet ms, helvetica, sans-serif;'>Hello Trader!,!<br><br>Temos Novidades sobre o ativo:  <b> {assetName}</b>. O valor atual dele é de  <b>{currentValue} <b/>.  De acordo com as suas notificações é hora de compra-lô";
+
+                    break;
+                default:
+                    break;
+            }
+            return (subjectStr, body);
+        }
+
+        private TimeSpan ValidateNextSendTime(DateTime? nextSendDate)
+        {
+            TimeSpan difference = DateTime.UtcNow - emailThrottle[HotSettings.EmailAddress].NextEmailUpdate.Value;
+            return difference;
         }
     }
 }

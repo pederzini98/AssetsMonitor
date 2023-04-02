@@ -26,6 +26,7 @@ namespace Domain.Entities
         [JsonPropertyName("regularMarketDayLow")] public double? MinValue { get; set; }
         [JsonPropertyName("regularMarketDayHigh")] public double? MaxValue { get; set; }
         [JsonPropertyName("longName")] public string? Name { get; set; }
+        [JsonIgnore] public DateTime? NextEmailUpdate { get; set; }
     }
     public class DeserializeAssetObjt
     {

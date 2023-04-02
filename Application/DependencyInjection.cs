@@ -1,4 +1,5 @@
 ﻿using FluentValidation;
+using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Application
@@ -11,7 +12,11 @@ namespace Application
             services.AddMediatR(sysConfig =>
                 sysConfig.RegisterServicesFromAssembly(assemblyObj));
 
+
             services.AddValidatorsFromAssembly(assemblyObj);
+            services.AddHttpClient<MonitoringData>();
+            services.AddSingleton<IMonitoringData, MonitoringData>();
+
             return services;
 
         }

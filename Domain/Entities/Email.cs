@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Domain.Helpers;
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
@@ -9,18 +10,18 @@ namespace Domain.Entities
 {
     public class Email
     {
-        public string? To { get; set; }
+        public List<string>? To { get; set; }
         public string? Subject { get; set; }
         public string? Body { get; set; }
         public DateTime? UpdatedIn { get; set; }
         public SmtpServerConfig? SmtpServerConfig { get; set; }
-        public Email(string subject, string body, NameValueCollection appSettings)
+        public Email(string subject, string body)
         {
-            To = appSettings["To"];
+            To = HotSettings.To;
             Subject = subject;
             Body = body;
             UpdatedIn = DateTime.Now.ToLocalTime();
-            SmtpServerConfig = new(appSettings);
+            SmtpServerConfig = new();
         }
     }
     public class SmtpServerConfig
@@ -32,13 +33,13 @@ namespace Domain.Entities
         public bool? UseSsl { get; set; }
         public int? Port { get; set; }
 
-        public SmtpServerConfig(NameValueCollection appSettings)
+        public SmtpServerConfig()
         {
-            SmtpHostName = appSettings["hostname"];
-            EmailAddress = appSettings["emailaddress"];
-            Password = appSettings["password"];
-            UseSsl = string.Equals(appSettings["useSsl"], "true");
-            Port = int.Parse(appSettings["port"] ?? "485");
+            SmtpHostName = HotSettings.SmtpHostName;
+            EmailAddress = HotSettings.EmailAddress;
+            Password = HotSettings.Password;
+            UseSsl = HotSettings.UseSsl ?? true;
+            Port = HotSettings.Port == 0 ? 485 : HotSettings.Port;
         }
     }
 }

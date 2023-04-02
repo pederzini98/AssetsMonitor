@@ -1,5 +1,6 @@
 ﻿using Application;
 using Domain.Entities;
+using Domain.Helpers;
 using Microsoft.VisualStudio.Threading;
 using System.Collections.Specialized;
 using System.Configuration;
@@ -32,10 +33,15 @@ namespace ConsoleApplication
                     return;
 
                 }
+                if (asset.ValueToBuy > asset.ValueToSell )
+                {
+                    Console.WriteLine("You choosed a higher buy value than the one to sell, i won't let you loose money >.<");
+                    return;
+                }
                 MonitoringData monitoringData = new();
-                NameValueCollection appSettings = ConfigurationManager.AppSettings;
+                HotSettings.StartValue(ConfigurationManager.AppSettings);
 
-                await monitoringData.FindAssetAsync(asset, appSettings);
+                await monitoringData.FindAssetAsync(asset);
 
             }
             catch (Exception e)
