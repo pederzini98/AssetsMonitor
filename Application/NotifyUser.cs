@@ -23,18 +23,17 @@ namespace Application
             try
             {
 
-                MailMessage message = new();
-
-                message.From = new MailAddress(email.SmtpServerConfig?.EmailAddress, HotDefault.SenderName, Encoding.UTF8);
-                foreach (var mailAddress in email.To)
+                MailMessage message = new()
+                {
+                    From = new MailAddress(email.SmtpServerConfig.EmailAddress, HotDefault.SenderName, Encoding.UTF8)
+                };
+                foreach (var mailAddress in email.To ?? new List<string>())
                 {
                     message.To.Add(new MailAddress(mailAddress ?? ""));
                 }
                 message.Subject = email.Subject;
                 message.Body = email.Body;
                 message.IsBodyHtml = true;
-
-
 
                 using SmtpClient smtp = new(email.SmtpServerConfig?.SmtpHostName, email.SmtpServerConfig?.Port ?? 587);
                 smtp.Credentials = new NetworkCredential(email.SmtpServerConfig?.EmailAddress, email.SmtpServerConfig?.Password);
@@ -43,8 +42,7 @@ namespace Application
             }
             catch (Exception e)
             {
-
-                string messasag = e.Message;
+                Console.WriteLine($"Unable to notify user about the change in assets.\n Please check your smtp server configs. If everithing is fine please wait until we try again or Contact our suport {HotDefault.SupportLink}. \nError: {e.Message} -- {e.StackTrace}");
             }
 
         }

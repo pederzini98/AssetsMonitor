@@ -5,15 +5,15 @@ VisualStudioVersion = 17.5.33516.290
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{D39A27E4-B397-470A-A619-FAF5F09356B1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domain", "Domain\Domain.csproj", "{703AC901-A8C2-4350-B4D5-792B45C8B612}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domain", "Domain\Domain.csproj", "{703AC901-A8C2-4350-B4D5-792B45C8B612}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Application", "Application\Application.csproj", "{BF33079F-DD61-41ED-BD17-9E310EB08BA3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Application", "Application\Application.csproj", "{BF33079F-DD61-41ED-BD17-9E310EB08BA3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure", "Infrastructure\Infrastructure.csproj", "{CFBD9F83-B1A5-4DE8-896E-7E2B63479B64}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Infrastructure", "Infrastructure\Infrastructure.csproj", "{CFBD9F83-B1A5-4DE8-896E-7E2B63479B64}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Presentation", "Presentation\Presentation.csproj", "{E9B6372B-5F2E-49DE-93B4-A19DC06E3C96}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Presentation", "Presentation\Presentation.csproj", "{E9B6372B-5F2E-49DE-93B4-A19DC06E3C96}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApplication", "ConsoleApplication\ConsoleApplication\ConsoleApplication.csproj", "{CC08314B-5599-4EF0-961D-4C2079C53515}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConsoleApplication", "ConsoleApplication\ConsoleApplication\ConsoleApplication.csproj", "{CC08314B-5599-4EF0-961D-4C2079C53515}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

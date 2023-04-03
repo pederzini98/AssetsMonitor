@@ -2,7 +2,6 @@
 using Domain.Entities;
 using Domain.Helpers;
 using Microsoft.VisualStudio.Threading;
-using System.Collections.Specialized;
 using System.Configuration;
 
 namespace ConsoleApplication

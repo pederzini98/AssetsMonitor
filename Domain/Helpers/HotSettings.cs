@@ -1,17 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.Configuration;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Specialized;
 
 namespace Domain.Helpers
 {
     public static class HotSettings
     {
 
-     
+
         public static string? SmtpHostName { get => _smtpHostName; }
         private static string? _smtpHostName;
         public static string? EmailAddress { get => _emailAddress; }
@@ -37,7 +31,7 @@ namespace Domain.Helpers
             _password = appSettings["password"];
             _useSsl = string.Equals(appSettings["useSsl"], "true");
             _port = int.Parse(appSettings["port"] ?? "485");
-            _to = new List<string>(appSettings["to"].Split(','));
+            _to = new List<string>((appSettings["to"] ?? "").Split(','));
         }
 
     }
