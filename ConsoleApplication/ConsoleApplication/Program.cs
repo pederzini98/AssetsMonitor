@@ -1,6 +1,8 @@
 ﻿using Application;
 using Domain.Entities;
 using Domain.Helpers;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.VisualStudio.Threading;
 using System.Configuration;
 
@@ -10,7 +12,6 @@ namespace ConsoleApplication
     {
         static async Task Main(string[] args)
         {
-
             if (args.Length != 3)
             {
                 Console.WriteLine("Please enter all the required arguments separeted by space: Ex: Petra4 20,2 30,3");

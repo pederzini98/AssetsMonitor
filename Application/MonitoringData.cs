@@ -59,18 +59,12 @@ namespace Application
                                         assetFoundFromAPI.NextEmailUpdate = DateTime.UtcNow;
                                         emailThrottle.TryAdd(HotSettings.EmailAddress, assetFoundFromAPI);
                                     }
-                                    /* if (assetFoundFromAPI.NextEmailUpdate.HasValue && emailThrottle[HotSettings.EmailAddress].NextEmailUpdate > DateTime.UtcNow // Timeout to send emails,just to not ended up being blocked by your smtp server
-                                         || (lastValueFound == assetFoundFromAPI?.CurrentValue &&
-                                         ValidateNextSendTime(assetFoundFromAPI.NextEmailUpdate.Value) < TimeSpan.FromMinutes(HotDefault.SendEmailTimeout)))
-                                     {
-                                         requestsThrottle = DateTime.UtcNow.AddMinutes(ValidateNextSendTime(assetFoundFromAPI.NextEmailUpdate.Value).TotalMinutes);
-                                         continue;
-                                     }
-                                    */
+                             
                                     switch (actions)
                                     {
                                         case AssetsAction.NoChanges:
                                             requestsThrottle = DateTime.UtcNow.AddMinutes(HotDefault.ApiRequestTimeout);
+                                            Console.WriteLine($"Last value got from the api about '{assetToLookFor.Name}': {assetFoundFromAPI?.CurrentValue}'. No changes so no email will be sent");
                                             continue;
                                         case AssetsAction.TimeToSell:
                                         case AssetsAction.TimeToBuy:
@@ -81,7 +75,7 @@ namespace Application
                                                 forceStop = true; // no point keep running the program due to configuration or input errors
                                                 break;
                                             }
-                                            Console.WriteLine($"Email sent to {string.Join(",", emailToSend.To)}, next email will be sent at {DateTime.UtcNow.AddMinutes(HotDefault.SendEmailTimeout)}");
+                                            Console.WriteLine($"Email sent to {string.Join(",", emailToSend.To)}.If we receive any other change, your next email will be sent at {DateTime.Now.AddMinutes(HotDefault.SendEmailTimeout)}");
                                             requestsThrottle = DateTime.UtcNow.AddMinutes(HotDefault.ApiRequestTimeout);
                                             emailThrottle[HotSettings.EmailAddress].NextEmailUpdate = DateTime.UtcNow.AddMinutes(HotDefault.SendEmailTimeout);
                                             actions = AssetsAction.NoChanges;
@@ -98,7 +92,7 @@ namespace Application
                             }
                             catch (Exception e)
                             {
-                                string errorr = e.Message;
+                                Console.WriteLine($"Unexpected error {e.Message}. Please enter in contact with our support: {HotDefault.SupportLink}");
                             }
                             continue;
 
@@ -142,11 +136,11 @@ namespace Application
             {
                 case AssetsAction.TimeToSell:
                     subjectStr = HotDefault.SellSubject.Replace("{x}", asset?.Name);
-                    body = @$"<span style='font-family:trebuchet ms, helvetica, sans-serif;'>Hello Trader!<br><br>Temos Novidades sobre o ativo:  <b> {asset?.Name}</b>. O valor atual dele é de  <b>{currentValue} </b>.  De acordo com as suas configurações é hora de vende-lô.<br><br> Valor máximo do ativo até o momento: <b>{(maxValue == 0 ? "Não foi possível resgatar o valor máximo" : maxValue)}</b><br><br>Valor minímo do ativo até o momento: <b>{(minValue == 0 ? "Não foi possível resgatar o valor mínimo" : minValue)}</b></span>";
+                    body = @$"<span style='font-family:trebuchet ms, helvetica, sans-serif;'>Hello Trader!<br><br>Temos Novidades sobre o ativo:  <b> {asset?.Name}</b>. O valor atual é de <b>{currentValue} </b>. De acordo com as suas configurações é hora de vende-lô.<br><br> Valor máximo do ativo até o momento: <b>{(maxValue == 0 ? "Não foi possível resgatar o valor máximo" : maxValue)}</b><br><br>Valor minímo do ativo até o momento: <b>{(minValue == 0 ? "Não foi possível resgatar o valor mínimo" : minValue)}</b></span>";
                     break;
                 case AssetsAction.TimeToBuy:
                     subjectStr = HotDefault.BuySubject.Replace("{x}", asset?.Name);
-                    body = @$"<span style='font-family:trebuchet ms, helvetica, sans-serif;'>Hello Trader!<br><br>Temos Novidades sobre o ativo:  <b> {asset?.Name}</b>. O valor atual dele é de  <b>{currentValue} </b>.  De acordo com as suas configurações é hora de compra-lô.<br><br> Valor máximo do ativo até o momento: <b>{(maxValue == 0 ? "Não foi possível resgatar o valor máximo" : maxValue)}</b><br><br>Valor minímo do ativo até o momento: <b>{(minValue == 0 ? "Não foi possível resgatar o valor mínimo" : minValue)}</b></span>";
+                    body = @$"<span style='font-family:trebuchet ms, helvetica, sans-serif;'>Hello Trader!<br><br>Temos Novidades sobre o ativo:  <b> {asset?.Name}</b>. O valor atual é de <b>{currentValue} </b>. De acordo com as suas configurações é hora de compra-lô.<br><br> Valor máximo do ativo até o momento: <b>{(maxValue == 0 ? "Não foi possível resgatar o valor máximo" : maxValue)}</b><br><br>Valor minímo do ativo até o momento: <b>{(minValue == 0 ? "Não foi possível resgatar o valor mínimo" : minValue)}</b></span>";
 
                     break;
                 default:

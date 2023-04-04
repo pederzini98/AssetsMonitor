@@ -13,16 +13,10 @@ namespace Application
 {
     public class NotifyUser
     {
-        public Dictionary<string, DateTime> UserThrottle = new();
-        public DateTime UserLastEmailSent(string email)
-        {
-            return UserThrottle.ContainsKey(email) ? UserThrottle[email] : DateTime.UtcNow;
-        }
         public static bool SendNotificationEmail(Email email)
         {
             try
             {
-
                 MailMessage message = new()
                 {
                     From = new MailAddress(email?.SmtpServerConfig?.EmailAddress, HotDefault.SenderName, Encoding.UTF8)
