@@ -10,7 +10,7 @@ namespace Domain.Entities
         public SmtpServerConfig? SmtpServerConfig { get; set; }
         public Email(string subject, string body)
         {
-            To = HotSettings.To;
+            To = HotSettings.To.Split(",").ToList();
             Subject = subject;
             Body = body;
             SmtpServerConfig = new();

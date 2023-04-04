@@ -32,7 +32,7 @@ namespace Application
 
                         if (ex.Message.Contains("is not in the form required for an e-mail address"))
                         {
-                            Console.WriteLine($"Unable to add recipient.\this email is not in the right format and will not receive the email: ['{mailAddress}']");
+                            Console.WriteLine($"Unable to add recipient.This email is not in the right format and will not receive the email: ['{mailAddress}']");
                             continue;
                         };
                     }
@@ -47,6 +47,8 @@ namespace Application
                 smtp.Credentials = new NetworkCredential(email.SmtpServerConfig?.EmailAddress, email.SmtpServerConfig?.Password);
                 smtp.EnableSsl = email.SmtpServerConfig.UseSsl ?? true;
                 smtp.Send(message);
+                Console.WriteLine($"Email sent to {string.Join(",", message.To)}.If we receive any other change, your next email will be sent at {DateTime.Now.AddMinutes(HotDefault.SendEmailTimeout)}");
+
                 return true;
             }
             catch (SmtpException smtpException)

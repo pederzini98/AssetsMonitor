@@ -18,6 +18,8 @@ namespace Application
             AssetsAction actions = AssetsAction.NoChanges;
             double? lastValueFound = 0;
             bool forceStop = false;
+            Console.WriteLine($"STARTING AGAIN {lastValueFound}");
+
             while (forceStop is false)
             {
                 if (requestsThrottle < DateTime.UtcNow)// Timeout to not flood the api that i'm using
@@ -64,7 +66,7 @@ namespace Application
                                     {
                                         case AssetsAction.NoChanges:
                                             requestsThrottle = DateTime.UtcNow.AddMinutes(HotDefault.ApiRequestTimeout);
-                                            Console.WriteLine($"Last value got from the api about '{assetToLookFor.Name}': {assetFoundFromAPI?.CurrentValue}'. No changes so no email will be sent");
+                                            Console.WriteLine($"Last value got from the api about '{assetToLookFor.Name}': {assetFoundFromAPI?.CurrentValue} -- {lastValueFound}. No changes so no email will be sent");
                                             continue;
                                         case AssetsAction.TimeToSell:
                                         case AssetsAction.TimeToBuy:
@@ -75,7 +77,6 @@ namespace Application
                                                 forceStop = true; // no point keep running the program due to configuration or input errors
                                                 break;
                                             }
-                                            Console.WriteLine($"Email sent to {string.Join(",", emailToSend.To)}.If we receive any other change, your next email will be sent at {DateTime.Now.AddMinutes(HotDefault.SendEmailTimeout)}");
                                             requestsThrottle = DateTime.UtcNow.AddMinutes(HotDefault.ApiRequestTimeout);
                                             emailThrottle[HotSettings.EmailAddress].NextEmailUpdate = DateTime.UtcNow.AddMinutes(HotDefault.SendEmailTimeout);
                                             actions = AssetsAction.NoChanges;
