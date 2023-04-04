@@ -41,9 +41,11 @@ namespace Application
                 message.Body = email.Body;
                 message.IsBodyHtml = true;
 
+                Console.WriteLine($"Trying to connect to smtp server and send message...");
+
                 using SmtpClient smtp = new(email.SmtpServerConfig?.SmtpHostName, email.SmtpServerConfig?.Port ?? 587);
                 smtp.Credentials = new NetworkCredential(email.SmtpServerConfig?.EmailAddress, email.SmtpServerConfig?.Password);
-                smtp.EnableSsl = true;
+                smtp.EnableSsl = email.SmtpServerConfig.UseSsl ?? true;
                 smtp.Send(message);
                 return true;
             }
