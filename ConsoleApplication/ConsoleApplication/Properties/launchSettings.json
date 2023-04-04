@@ -2,7 +2,7 @@
   "profiles": {
     "ConsoleApplication": {
       "commandName": "Project",
-      "commandLineArgs": "PETR4 1000 25",
+      "commandLineArgs": "petr4 30 28",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }

@@ -17,8 +17,7 @@ namespace Application
             DateTime requestsThrottle = DateTime.UtcNow;
             AssetsAction actions = AssetsAction.NoChanges;
             double? lastValueFound = 0;
-            bool forceStop = false;
-            Console.WriteLine($"STARTING AGAIN {lastValueFound}");
+            bool forceStop = false; // will stop the api if any major error occur
 
             while (forceStop is false)
             {
@@ -27,7 +26,12 @@ namespace Application
                     try
                     {
                         string resultFromApi = await SendRequestToaAPIAsync(assetToLookFor.Name);
-
+                        if (string.IsNullOrEmpty(resultFromApi))
+                        {
+                            requestsThrottle = DateTime.UtcNow.AddMinutes(HotDefault.ApiRequestTimeout);
+                            Console.WriteLine($"Unable to desserialize object from server, trying again soon");
+                            continue;
+                        }
                         if (resultFromApi.Contains("NotFound"))
                         {
                             Console.WriteLine($"Unable to find assets with the name: '{assetToLookFor.Name}'. \nStopping the program");
@@ -61,7 +65,7 @@ namespace Application
                                         assetFoundFromAPI.NextEmailUpdate = DateTime.UtcNow;
                                         emailThrottle.TryAdd(HotSettings.EmailAddress, assetFoundFromAPI);
                                     }
-                             
+
                                     switch (actions)
                                     {
                                         case AssetsAction.NoChanges:
@@ -87,8 +91,7 @@ namespace Application
                                     }
                                 }
                                 requestsThrottle = DateTime.UtcNow.AddMinutes(HotDefault.ApiRequestTimeout);
-                                Console.WriteLine($"Unable Desserialize the result from the server, please enter in contact with our support: {HotDefault.SupportLink}");
-                                continue;
+
 
                             }
                             catch (Exception e)

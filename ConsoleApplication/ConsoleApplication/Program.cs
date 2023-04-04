@@ -19,34 +19,36 @@ namespace ConsoleApplication
 
             IConfiguration config = host.Services.GetRequiredService<IConfiguration>();
 
-            config.GetRequiredSection("Settings").Get<HotSettings>();
             //OR
-            var teste = HotSettings.Port;
 
             if (args.Length != 3)
             {
-                Console.WriteLine("Please enter all the required arguments separeted by space: Ex: Petra4 20,2 30,3");
-                Console.ReadLine();
+                Console.WriteLine("Please enter all the required arguments separeted by space. Ex: Petra4 20,2 30,3");
+                Console.WriteLine("Program stopped, press enter to leave");
 
+                Console.ReadLine();
                 return;
             }
             try
             {
 
+                config.GetRequiredSection("Settings").Get<HotSettings>();
                 Asset asset = new(args[0], args[1], args[2]);
                 if (asset is null || string.IsNullOrEmpty(asset.Name))
                 {
                     Console.WriteLine("Name can't be Empty");
-                    Console.ReadLine();
+                    Console.WriteLine("Program stopped, press enter to leave");
 
+                    Console.ReadLine();
                     return;
 
                 }
                 if (asset.ValueToBuy < 0 || asset.ValueToSell < 0)
                 {
                     Console.WriteLine("Can't use negative values to get a stock");
-                    Console.ReadLine();
+                    Console.WriteLine("Program stopped, press enter to leave");
 
+                    Console.ReadLine();
                     return;
 
                 }
@@ -66,13 +68,19 @@ namespace ConsoleApplication
                 {
 
                     Console.WriteLine($"Please enter valid data to check the stock price. " +
-                        $"\nValue to sell (must be a positive number): {args[1]} \nValue to sell (must be a positive number): " +
-                        $"{args[2]}.\nThis error can be caused by a wrong 'port' in your config\nPress enter to leave");
+                        $"\nValue to sell (must be a positive number): {args[1]} \nValue to buy (must be a positive number): " +
+                        $"{args[2]}.\nThis error can be caused by a wrong 'port' in your config\n");
+                }
+                if(e.Message.Contains("Failed to convert configuration value"))
+                {
+                    Console.WriteLine("Your config are not in the correct format");
                 }
 
             }
             finally
             {
+                Console.WriteLine("Program stopped, press enter to leave");
+
                 Console.ReadLine();
 
             }

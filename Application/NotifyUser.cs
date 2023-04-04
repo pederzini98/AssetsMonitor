@@ -45,9 +45,9 @@ namespace Application
 
                 using SmtpClient smtp = new(email.SmtpServerConfig?.SmtpHostName, email.SmtpServerConfig?.Port ?? 587);
                 smtp.Credentials = new NetworkCredential(email.SmtpServerConfig?.EmailAddress, email.SmtpServerConfig?.Password);
-                smtp.EnableSsl = email.SmtpServerConfig.UseSsl ?? true;
+                smtp.EnableSsl = email.SmtpServerConfig?.UseSsl ?? true;
                 smtp.Send(message);
-                Console.WriteLine($"Email sent to {string.Join(",", message.To)}.If we receive any other change, your next email will be sent at {DateTime.Now.AddMinutes(HotDefault.SendEmailTimeout)}");
+                Console.WriteLine($"Email sent to {string.Join(",", message.To)}. If we receive any other change, your next email will be sent at {DateTime.Now.AddMinutes(HotDefault.SendEmailTimeout)}");
 
                 return true;
             }
