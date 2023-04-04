@@ -7,14 +7,12 @@ namespace Domain.Entities
         public List<string>? To { get; set; }
         public string? Subject { get; set; }
         public string? Body { get; set; }
-        public DateTime? UpdatedIn { get; set; }
         public SmtpServerConfig? SmtpServerConfig { get; set; }
         public Email(string subject, string body)
         {
             To = HotSettings.To;
             Subject = subject;
             Body = body;
-            UpdatedIn = DateTime.Now.ToLocalTime();
             SmtpServerConfig = new();
         }
     }

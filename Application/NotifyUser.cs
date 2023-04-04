@@ -32,7 +32,7 @@ namespace Application
 
                         if (ex.Message.Contains("is not in the form required for an e-mail address"))
                         {
-                            Console.WriteLine($"Unable to add recipient.\nThese Emails are not in the right format: ['{mailAddress}']");
+                            Console.WriteLine($"Unable to add recipient.\this email is not in the right format and will not receive the email: ['{mailAddress}']");
                             continue;
                         };
                     }
