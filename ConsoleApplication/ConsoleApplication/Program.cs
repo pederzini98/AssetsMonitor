@@ -32,7 +32,7 @@ namespace ConsoleApplication
                     return;
 
                 }
-                if (asset.ValueToBuy > asset.ValueToSell )
+                if (asset.ValueToBuy > asset.ValueToSell)
                 {
                     Console.WriteLine("You choosed a higher buy value than the one to sell, i won't let you loose money >.<");
                     return;
@@ -47,7 +47,10 @@ namespace ConsoleApplication
             {
                 if (e.Message.Contains("was not in a correct format."))
                 {
-                    Console.WriteLine($"Please enter valid NUMBER to check the stock price \nFirst argument: {args[1]} \nSecond argument: {args[2]}");
+
+                    Console.WriteLine($"Please enter valid data to check the stock price. " +
+                        $"\nValue to sell (must be a positive number): {args[1]} \nValue to sell (must be a positive number): " +
+                        $"{args[2]}.\nThis error can be caused by a wrong 'port' in your config\nPress enter to leave");
                 }
 
             }

@@ -17,7 +17,7 @@
 
         #region Control default
 
-        private static readonly int _sendEmailTimeout = 2;
+        private static readonly int _sendEmailTimeout = 5;
         public static int SendEmailTimeout { get => _sendEmailTimeout; }
 
         private static readonly int _apiRequestTimeout = 1;

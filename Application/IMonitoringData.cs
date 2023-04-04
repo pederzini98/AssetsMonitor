@@ -12,10 +12,10 @@ namespace Application
     {
         Task FindAssetAsync(Asset assetToLookFor);
         AssetFoundFromAPI DeserializeResponseFromAPI(string response);
-        Email BuildEmail(double? currentValue, string? assetName, AssetsAction actions);
-        (string subject, string body) MountEmailInfos(double? currentValue, string? assetName, AssetsAction actions);
+        Email BuildEmail(Asset? asset, double? currentValue, double? maxValue, double? minValue, AssetsAction actions);
+        (string subject, string body) MountEmailInfos(Asset? asset, double? currentValue, double? maxValue, double? minValue, AssetsAction actions);
 
-        Task<string> SendRequestToaAPIAsync(Asset assetToLookFor);
+        Task<string> SendRequestToaAPIAsync(string assetToLookFor);
         TimeSpan ValidateNextSendTime(DateTime nextSendDate);
     }
 }

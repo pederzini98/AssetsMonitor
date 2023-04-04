@@ -14,17 +14,23 @@ namespace Application
         #region Main function
         public async Task FindAssetAsync(Asset assetToLookFor)
         {
-
             DateTime requestsThrottle = DateTime.UtcNow;
             AssetsAction actions = AssetsAction.NoChanges;
             double? lastValueFound = 0;
-            while (true)
+            bool forceStop = false;
+            while (forceStop is false)
             {
                 if (requestsThrottle < DateTime.UtcNow)// Timeout to not flood the api that i'm using
                 {
                     try
                     {
-                        string resultFromApi = await SendRequestToaAPIAsync(assetToLookFor); ;
+                        string resultFromApi = await SendRequestToaAPIAsync(assetToLookFor.Name);
+
+                        if (resultFromApi.Contains("NotFound"))
+                        {
+                            Console.WriteLine($"Unable to find assets with the name: '{assetToLookFor.Name}'. \nStopping the program");
+                            break;
+                        }
                         if (string.IsNullOrEmpty(resultFromApi) is false)
                         {
                             try
@@ -33,36 +39,49 @@ namespace Application
 
                                 if (assetFoundFromAPI is not null && assetFoundFromAPI.CurrentValue is not null)
                                 {
+                                    switch (assetFoundFromAPI?.CurrentValue)
+                                    {
+                                        case var value when assetFoundFromAPI?.CurrentValue == lastValueFound:
+                                            actions = AssetsAction.NoChanges;
+                                            break;
+                                        case var value when assetFoundFromAPI?.CurrentValue < assetToLookFor.ValueToBuy:
+                                            actions = AssetsAction.TimeToBuy;
+                                            break;
+                                        case var value when assetFoundFromAPI?.CurrentValue > assetToLookFor.ValueToSell:
+                                            actions = AssetsAction.TimeToSell;
+                                            break;
+                                        default:
+                                            break;
+                                    }
 
-                                    if (assetFoundFromAPI?.CurrentValue > assetToLookFor.ValueToBuy)
-                                    {
-                                        actions = AssetsAction.TimeToBuy;
-                                    }
-                                    if (assetFoundFromAPI?.CurrentValue > assetToLookFor.ValueToSell)
-                                    {
-                                        actions = AssetsAction.TimeToSell;
-                                    }
-                                    if (emailThrottle.ContainsKey(key: HotSettings.EmailAddress) is false)
+                                    if (assetFoundFromAPI is not null && emailThrottle.ContainsKey(key: HotSettings.EmailAddress) is false)
                                     {
                                         assetFoundFromAPI.NextEmailUpdate = DateTime.UtcNow;
                                         emailThrottle.TryAdd(HotSettings.EmailAddress, assetFoundFromAPI);
                                     }
-                                    if (emailThrottle[HotSettings.EmailAddress].NextEmailUpdate > DateTime.UtcNow // Timeout to send emails,just to not ended up being blocked by your smtp servert
-                                        || (lastValueFound == assetFoundFromAPI?.CurrentValue && 
-                                        ValidateNextSendTime(assetFoundFromAPI.NextEmailUpdate.Value) < TimeSpan.FromMinutes(HotDefault.SendEmailTimeout)))
-                                    {
-                                        requestsThrottle = DateTime.UtcNow.AddMinutes(ValidateNextSendTime(assetFoundFromAPI.NextEmailUpdate.Value).TotalMinutes);
-                                        continue;
-                                    }
-
+                                    /* if (assetFoundFromAPI.NextEmailUpdate.HasValue && emailThrottle[HotSettings.EmailAddress].NextEmailUpdate > DateTime.UtcNow // Timeout to send emails,just to not ended up being blocked by your smtp server
+                                         || (lastValueFound == assetFoundFromAPI?.CurrentValue &&
+                                         ValidateNextSendTime(assetFoundFromAPI.NextEmailUpdate.Value) < TimeSpan.FromMinutes(HotDefault.SendEmailTimeout)))
+                                     {
+                                         requestsThrottle = DateTime.UtcNow.AddMinutes(ValidateNextSendTime(assetFoundFromAPI.NextEmailUpdate.Value).TotalMinutes);
+                                         continue;
+                                     }
+                                    */
                                     switch (actions)
                                     {
                                         case AssetsAction.NoChanges:
+                                            requestsThrottle = DateTime.UtcNow.AddMinutes(HotDefault.ApiRequestTimeout);
                                             continue;
                                         case AssetsAction.TimeToSell:
                                         case AssetsAction.TimeToBuy:
-                                            var emailToSend = BuildEmail(assetFoundFromAPI?.CurrentValue, assetToLookFor.Name, actions);
-                                            NotifyUser.SendNotificationEmail(emailToSend);
+                                            var emailToSend = BuildEmail(assetToLookFor, assetFoundFromAPI?.CurrentValue, assetFoundFromAPI?.MaxValue, assetFoundFromAPI?.MinValue, actions);
+
+                                            if (NotifyUser.SendNotificationEmail(emailToSend) is false)
+                                            {
+                                                forceStop = true; // no point keep running the program due to configuration or input errors
+                                                break;
+                                            }
+                                            Console.WriteLine($"Email sent to {string.Join(",", emailToSend.To)}, next email will be sent at {DateTime.UtcNow.AddMinutes(HotDefault.SendEmailTimeout)}");
                                             requestsThrottle = DateTime.UtcNow.AddMinutes(HotDefault.ApiRequestTimeout);
                                             emailThrottle[HotSettings.EmailAddress].NextEmailUpdate = DateTime.UtcNow.AddMinutes(HotDefault.SendEmailTimeout);
                                             actions = AssetsAction.NoChanges;
@@ -99,7 +118,7 @@ namespace Application
 
         #endregion
 
-        #region Email build and data manipulation
+        #region Email builder and data manipulation
         public AssetFoundFromAPI DeserializeResponseFromAPI(string response)
         {
             JsonDocument document = JsonDocument.Parse(response);
@@ -108,27 +127,26 @@ namespace Application
             string? valuesOfResponseToString = valuesOfResponse.ToString();
             return JsonSerializer.Deserialize<List<AssetFoundFromAPI>>(valuesOfResponseToString)?.FirstOrDefault() ?? new AssetFoundFromAPI();
         }
-        public  Email BuildEmail(double? currentValue, string? assetName, AssetsAction actions)
+        public Email BuildEmail(Asset? asset, double? currentValue, double? maxValue, double? minValue, AssetsAction actions)
         {
-            (string subject, string body) = MountEmailInfos(currentValue, assetName, actions);
+            (string subject, string body) = MountEmailInfos(asset, currentValue, maxValue, minValue, actions);
             Email email = new(subject, body);
             return email;
         }
-        public  (string subject, string body) MountEmailInfos(double? currentValue, string? assetName, AssetsAction actions)
+        public (string subject, string body) MountEmailInfos(Asset? asset, double? currentValue, double? maxValue, double? minValue, AssetsAction actions)
         {
             string subjectStr = string.Empty;
             string body = string.Empty;
 
             switch (actions)
             {
-
                 case AssetsAction.TimeToSell:
-                    subjectStr = HotDefault.SellSubject.Replace("{x}", assetName);
-                    body = $"<span style='font-family:trebuchet ms, helvetica, sans-serif;'>Hello Trader!,!<br><br>Temos Novidades sobre o ativo:  <b> {assetName}</b>. O valor atual dele é de  <b>{currentValue} <b/>.  De acordo com as suas notificações é hora de vende-lô";
+                    subjectStr = HotDefault.SellSubject.Replace("{x}", asset?.Name);
+                    body = @$"<span style='font-family:trebuchet ms, helvetica, sans-serif;'>Hello Trader!<br><br>Temos Novidades sobre o ativo:  <b> {asset?.Name}</b>. O valor atual dele é de  <b>{currentValue} </b>.  De acordo com as suas configurações é hora de vende-lô.<br><br> Valor máximo do ativo até o momento: <b>{(maxValue == 0 ? "Não foi possível resgatar o valor máximo" : maxValue)}</b><br><br>Valor minímo do ativo até o momento: <b>{(minValue == 0 ? "Não foi possível resgatar o valor mínimo" : minValue)}</b></span>";
                     break;
                 case AssetsAction.TimeToBuy:
-                    subjectStr = HotDefault.BuySubject.Replace("{x}", assetName);
-                    body = $"<span style='font-family:trebuchet ms, helvetica, sans-serif;'>Hello Trader!,!<br><br>Temos Novidades sobre o ativo:  <b> {assetName}</b>. O valor atual dele é de  <b>{currentValue} <b/>.  De acordo com as suas notificações é hora de compra-lô";
+                    subjectStr = HotDefault.BuySubject.Replace("{x}", asset?.Name);
+                    body = @$"<span style='font-family:trebuchet ms, helvetica, sans-serif;'>Hello Trader!<br><br>Temos Novidades sobre o ativo:  <b> {asset?.Name}</b>. O valor atual dele é de  <b>{currentValue} </b>.  De acordo com as suas configurações é hora de compra-lô.<br><br> Valor máximo do ativo até o momento: <b>{(maxValue == 0 ? "Não foi possível resgatar o valor máximo" : maxValue)}</b><br><br>Valor minímo do ativo até o momento: <b>{(minValue == 0 ? "Não foi possível resgatar o valor mínimo" : minValue)}</b></span>";
 
                     break;
                 default:
@@ -138,22 +156,26 @@ namespace Application
         }
         #endregion
 
-        #region Send Data
-        public  async Task<string> SendRequestToaAPIAsync(Asset assetToLookFor)
+        #region Look for asset in the api
+        public async Task<string> SendRequestToaAPIAsync(string assetToLookFor)
         {
             try
             {
                 using HttpClient httpClient = new();
-                using var request = new HttpRequestMessage(new HttpMethod("GET"), $"{HotDefault.ApiURl}{assetToLookFor.Name}");
+                using var request = new HttpRequestMessage(new HttpMethod("GET"), $"{HotDefault.ApiURl}{assetToLookFor}");
                 request.Headers.TryAddWithoutValidation("Upgrade-Insecure-Requests", "1");
                 var response = await httpClient.SendAsync(request);
+                if (response.IsSuccessStatusCode is false)
+                {
+                    return response.StatusCode.ToString();
+                }
                 return await response.Content.ReadAsStringAsync();
 
             }
             catch (Exception e)
             {
-
-                return e.Message;
+                Console.WriteLine($"Unexpected error with our request to the api, wait for the next retry or enter in contact with our support: {HotDefault.SupportLink}\n {e.Message}");
+                return string.Empty;
 
             }
         }
@@ -161,7 +183,7 @@ namespace Application
         #endregion
 
         #region Control actions
-        public  TimeSpan ValidateNextSendTime(DateTime nextSendDate)
+        public TimeSpan ValidateNextSendTime(DateTime nextSendDate) //I Believe the ideal time beetwen emails with the same asset value from the previous request should be very higher
         {
             TimeSpan difference = DateTime.UtcNow - nextSendDate;
             return difference;

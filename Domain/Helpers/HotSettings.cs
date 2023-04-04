@@ -1,8 +1,9 @@
 ﻿using System.Collections.Specialized;
+using System.Xml.Linq;
 
 namespace Domain.Helpers
 {
-    public static class HotSettings
+    public  class HotSettings
     {
 
 
@@ -32,6 +33,10 @@ namespace Domain.Helpers
             _useSsl = string.Equals(appSettings["useSsl"], "true");
             _port = int.Parse(appSettings["port"] ?? "485");
             _to = new List<string>((appSettings["to"] ?? "").Split(','));
+        }
+        public override string ToString()
+        {
+            return $"Configuration File: hostname:{_smtpHostName}\nemailAddress:{_emailAddress}\nhostname:{_smtpHostName}\nhostname:{_smtpHostName}\nhostname:{_smtpHostName}\nhostname:{_smtpHostName}\n";
         }
 
     }
